@@ -1,5 +1,7 @@
 class ImportsUtility {
 
+	static final int EXIT_STATUS_INPUT_ERROR = 1
+
 	static final String UMBRELLA_HEADERS_OPTION = '-uh'
 	static final String PATH_SEPARATOR = ':'
 
@@ -9,11 +11,44 @@ class ImportsUtility {
 	static final String HEADER_EXTENSION = '.h'
 
 	static void main(String[] args) {
-		File umbrellaFile = new File("/Users/Max/Documents/My_projects/Utilities/ImportsUtility/JRE.h")
-		File headerFile = new File("/Users/Max/Documents/My_projects/Utilities/ImportsUtility/IOSArray.h")
-		Map<String, String> frameworksHeaders = new HashMap<>()
-		frameworksHeaders.putAll(readUmbrellaHeader(umbrellaFile))
-		replaceLocalImportsByModular(headerFile, frameworksHeaders)
+		List<String> umbrellaHeaderPaths = null
+		List<String> sourceHeaderPaths = new ArrayList()
+		for (int i = 0; i < args.length; i++) {
+			String arg = args[i];
+			if (UMBRELLA_HEADERS_OPTION.equals(arg)) {
+				if (i + 1 < args.length) {
+					umbrellaHeaderPaths = args[++i].split(PATH_SEPARATOR)
+				}
+			} else {
+				sourceHeaderPaths.add(arg)
+			}
+		}
+		if (umbrellaHeaderPaths == null || umbrellaHeaderPaths.size() == 0) {
+			println 'Umbrella header paths are not set. Use -uh option.'
+    		System.exit(EXIT_STATUS_INPUT_ERROR)
+		}
+		if (sourceHeaderPaths.size() == 0) {
+			println 'Source header paths are not set.'
+    		System.exit(EXIT_STATUS_INPUT_ERROR)
+		}
+
+		Map<String, String> headerFrameworkMap = new HashMap<>()
+		for (String umbrellaHeaderPath : umbrellaHeaderPaths) {
+			File file = new File(umbrellaHeaderPath)
+			if (!file.exists() || file.isDirectory()) {
+				println "Can not open ${umbrellaHeaderPath}."
+	    		System.exit(EXIT_STATUS_INPUT_ERROR)
+			}
+			headerFrameworkMap.putAll(readUmbrellaHeader(file))
+		}
+		for (String sourceHeaderPath : sourceHeaderPaths) {
+			File file = new File(sourceHeaderPath)
+			if (!file.exists() || file.isDirectory()) {
+				println "Can not open ${sourceHeaderPath}."
+	    		System.exit(EXIT_STATUS_INPUT_ERROR)
+			}
+			replaceLocalWithFrameworkImports(file, headerFrameworkMap)
+		}
 	}
 
 	static Map<String, String> readUmbrellaHeader(File file) {
@@ -44,15 +79,13 @@ class ImportsUtility {
 		return headers
 	}
 
-	static void replaceLocalImportsByModular(File file, Map<String, String> frameworksHeaders) {
+	static void replaceLocalWithFrameworkImports(File file, Map<String, String> frameworksHeaders) {
 		List<String> newLines = new ArrayList<>()
 		file.eachLine { line ->
 			String newLine = replaceImportsInString(line, frameworksHeaders)
 			newLines.add(newLine)
 		}
-
-		File file2 = new File("/Users/Max/Documents/My_projects/Utilities/ImportsUtility/IOSArray2.h")
-		PrintWriter writer = new PrintWriter(file2)
+		PrintWriter writer = new PrintWriter(file)
    		newLines.each { line -> writer.println(line) }
    		writer.close()
 	}
