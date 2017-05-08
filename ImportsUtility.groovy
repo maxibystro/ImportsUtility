@@ -1,16 +1,19 @@
 class ImportsUtility {
 
-	static final int INVALID_INDEX = -1
-	static final String INCLUDE_STR = "#include"
-	static final String IMPORT_STR = "#import"
-	static final String HEADER_EXTENSION = ".h"
+	static final String UMBRELLA_HEADERS_OPTION = '-uh'
+	static final String PATH_SEPARATOR = ':'
 
-	static void main(args) {
-		File umbrellaFile = new File("/Users/Max/Documents/TestProjects/TestFrameworks2/TestFrameworks2/JRE.framework/headers/JRE.h");
-		File headerFile = new File("/Users/Max/Documents/TestProjects/TestFrameworks2/TestFrameworks2/JRE.framework/headers/IOSArray.h");
+	static final int INVALID_INDEX = -1
+	static final String INCLUDE_STR = '#include'
+	static final String IMPORT_STR = '#import'
+	static final String HEADER_EXTENSION = '.h'
+
+	static void main(String[] args) {
+		File umbrellaFile = new File("/Users/Max/Documents/My_projects/Utilities/ImportsUtility/JRE.h")
+		File headerFile = new File("/Users/Max/Documents/My_projects/Utilities/ImportsUtility/IOSArray.h")
 		Map<String, String> frameworksHeaders = new HashMap<>()
 		frameworksHeaders.putAll(readUmbrellaHeader(umbrellaFile))
-		replaceLocalImportsByModular(headerFile, frameworksHeaders);
+		replaceLocalImportsByModular(headerFile, frameworksHeaders)
 	}
 
 	static Map<String, String> readUmbrellaHeader(File file) {
@@ -32,11 +35,11 @@ class ImportsUtility {
 			if (index == INVALID_INDEX) {
 				return
 			} else {
-				index += headerPathPrefix.length();
+				index += headerPathPrefix.length()
 			}
 			toIndex = line.indexOf('>', index)
 			if (toIndex == INVALID_INDEX) return
-			headers.put(line.substring(index, toIndex), frameworkName);
+			headers.put(line.substring(index, toIndex), frameworkName)
 		}
 		return headers
 	}
@@ -44,22 +47,18 @@ class ImportsUtility {
 	static void replaceLocalImportsByModular(File file, Map<String, String> frameworksHeaders) {
 		List<String> newLines = new ArrayList<>()
 		file.eachLine { line ->
-			String newLine = replaceImportsInString(line, frameworksHeaders);
+			String newLine = replaceImportsInString(line, frameworksHeaders)
 			newLines.add(newLine)
 		}
 
-		// REPLACE BY WRITE
-		/*for (String line : newLines) {
-			System.out.println(line)
-		}*/
-		File file2 = new File("/Users/Max/Documents/TestProjects/TestFrameworks2/TestFrameworks2/JRE.framework/headers/IOSArray2.h");
-		PrintWriter writer = new PrintWriter(file)
+		File file2 = new File("/Users/Max/Documents/My_projects/Utilities/ImportsUtility/IOSArray2.h")
+		PrintWriter writer = new PrintWriter(file2)
    		newLines.each { line -> writer.println(line) }
    		writer.close()
 	}
 
 	static String replaceImportsInString(String str, Map<String, String> frameworksHeaders) {
-		int index = 0;
+		int index = 0
 		index = endIndexOf(str, IMPORT_STR, index)
 		if (index == INVALID_INDEX) {
 			index = endIndexOf(str, INCLUDE_STR, index)
@@ -86,8 +85,8 @@ class ImportsUtility {
 	}
 
 	static int endIndexOf(String str, String of, int fromIndex) {
-		int index = str.indexOf(of, fromIndex);
-		return index != INVALID_INDEX ? index + of.length() : INVALID_INDEX;
+		int index = str.indexOf(of, fromIndex)
+		return index != INVALID_INDEX ? index + of.length() : INVALID_INDEX
 	}
 
 }
