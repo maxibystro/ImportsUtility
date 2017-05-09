@@ -2,7 +2,9 @@ class ImportsUtility {
 
 	static final int EXIT_STATUS_INPUT_ERROR = 1
 
-	static final String UMBRELLA_HEADERS_OPTION = '-uh'
+	static final String OPTION_PREFIX = '-'
+	static final String DEFAULT_FRAMEWORK_NAME_OPTION = 'dfn'
+	static final String UMBRELLA_HEADERS_OPTION = 'uh'
 	static final String PATH_SEPARATOR = ':'
 
 	static final int INVALID_INDEX = -1
@@ -11,23 +13,30 @@ class ImportsUtility {
 	static final String HEADER_EXTENSION = '.h'
 
 	static void main(String[] args) {
+		String defaultFramework = null
 		List<String> umbrellaHeaderPaths = null
-		List<String> sourceHeaderPaths = new ArrayList()
+		List<String> sourcePaths = new ArrayList()
 		for (int i = 0; i < args.length; i++) {
 			String arg = args[i];
-			if (UMBRELLA_HEADERS_OPTION.equals(arg)) {
+			if (arg.startsWith(OPTION_PREFIX)) {
 				if (i + 1 < args.length) {
-					umbrellaHeaderPaths = args[++i].split(PATH_SEPARATOR)
+					String nextArg = args[++i]
+					String optionName = arg.substring(1, arg.length())
+					if (DEFAULT_FRAMEWORK_NAME_OPTION.equals(optionName)) {
+						defaultFramework = nextArg
+					} else if (UMBRELLA_HEADERS_OPTION.equals(optionName)) {
+						umbrellaHeaderPaths = nextArg.split(PATH_SEPARATOR)
+					}
 				}
 			} else {
-				sourceHeaderPaths.add(arg)
+				sourcePaths.add(arg)
 			}
 		}
 		if (umbrellaHeaderPaths == null || umbrellaHeaderPaths.size() == 0) {
 			println 'Umbrella header paths are not set. Use -uh option.'
     		System.exit(EXIT_STATUS_INPUT_ERROR)
 		}
-		if (sourceHeaderPaths.size() == 0) {
+		if (sourcePaths.size() == 0) {
 			println 'Source header paths are not set.'
     		System.exit(EXIT_STATUS_INPUT_ERROR)
 		}
@@ -41,13 +50,13 @@ class ImportsUtility {
 			}
 			headerFrameworkMap.putAll(readUmbrellaHeader(file))
 		}
-		for (String sourceHeaderPath : sourceHeaderPaths) {
-			File file = new File(sourceHeaderPath)
+		for (String sourcePath : sourcePaths) {
+			File file = new File(sourcePath)
 			if (!file.exists() || file.isDirectory()) {
-				println "Can not open ${sourceHeaderPath}."
+				println "Can not open ${sourcePath}."
 	    		System.exit(EXIT_STATUS_INPUT_ERROR)
 			}
-			replaceLocalWithFrameworkImports(file, headerFrameworkMap)
+			replaceLocalWithFrameworkImports(file, headerFrameworkMap, defaultFramework)
 		}
 	}
 
@@ -79,10 +88,10 @@ class ImportsUtility {
 		return headers
 	}
 
-	static void replaceLocalWithFrameworkImports(File file, Map<String, String> frameworksHeaders) {
+	static void replaceLocalWithFrameworkImports(File file, Map<String, String> frameworksHeaders, String defaultFramework) {
 		List<String> newLines = new ArrayList<>()
 		file.eachLine { line ->
-			String newLine = replaceImportsInString(line, frameworksHeaders)
+			String newLine = replaceImportsInString(line, frameworksHeaders, defaultFramework)
 			newLines.add(newLine)
 		}
 		PrintWriter writer = new PrintWriter(file)
@@ -90,7 +99,7 @@ class ImportsUtility {
    		writer.close()
 	}
 
-	static String replaceImportsInString(String str, Map<String, String> frameworksHeaders) {
+	static String replaceImportsInString(String str, Map<String, String> frameworksHeaders, String defaultFramework) {
 		int index = 0
 		index = endIndexOf(str, IMPORT_STR, index)
 		if (index == INVALID_INDEX) {
@@ -103,7 +112,8 @@ class ImportsUtility {
 		if (secondQuotesIndex == INVALID_INDEX) return str
 		if (!str.regionMatches(false, secondQuotesIndex - HEADER_EXTENSION.length(), HEADER_EXTENSION, 0, HEADER_EXTENSION.length())) return str
 		String headerPath = str.substring(firstQuotesIndex + 1, secondQuotesIndex)
-		String frameworkName = frameworksHeaders.get(headerPath)
+		String knownFrameworkName = frameworksHeaders.get(headerPath)
+		String frameworkName = knownFrameworkName != null ? knownFrameworkName : defaultFramework
 		if (frameworkName == null) return str
 		return str.substring(0, firstQuotesIndex) + '<' + frameworkName + '/' + headerPath + '>' + str.substring(secondQuotesIndex + 1)
 	}
