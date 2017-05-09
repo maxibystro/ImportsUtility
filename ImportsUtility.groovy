@@ -32,23 +32,21 @@ class ImportsUtility {
 				sourcePaths.add(arg)
 			}
 		}
-		if (umbrellaHeaderPaths == null || umbrellaHeaderPaths.size() == 0) {
-			println 'Umbrella header paths are not set. Use -uh option.'
-    		System.exit(EXIT_STATUS_INPUT_ERROR)
-		}
 		if (sourcePaths.size() == 0) {
 			println 'Source header paths are not set.'
     		System.exit(EXIT_STATUS_INPUT_ERROR)
 		}
 
 		Map<String, String> headerFrameworkMap = new HashMap<>()
-		for (String umbrellaHeaderPath : umbrellaHeaderPaths) {
-			File file = new File(umbrellaHeaderPath)
-			if (!file.exists() || file.isDirectory()) {
-				println "Can not open ${umbrellaHeaderPath}."
-	    		System.exit(EXIT_STATUS_INPUT_ERROR)
+		if (umbrellaHeaderPaths != null) {
+			for (String umbrellaHeaderPath : umbrellaHeaderPaths) {
+				File file = new File(umbrellaHeaderPath)
+				if (!file.exists() || file.isDirectory()) {
+					println "Can not open ${umbrellaHeaderPath}."
+		    		System.exit(EXIT_STATUS_INPUT_ERROR)
+				}
+				headerFrameworkMap.putAll(readUmbrellaHeader(file))
 			}
-			headerFrameworkMap.putAll(readUmbrellaHeader(file))
 		}
 		for (String sourcePath : sourcePaths) {
 			File file = new File(sourcePath)
