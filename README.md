@@ -2,8 +2,8 @@
 ImportsUtility replaces local imports with framework imports (via angle brackets) in Objective-C header files.
 
 ### SYNOPSIS
-`groovy ImportsUtility.groovy [ options ]  [ sourceheaders ]`  
-#### sourceheaders  
+`groovy ImportsUtility.groovy [ options ]  [ sources ]`  
+#### sources  
 One or more source files to be edited (such as MyClass.h and MyClass.m).
 
 ### OPTIONS
