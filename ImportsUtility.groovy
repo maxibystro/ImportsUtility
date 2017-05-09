@@ -33,7 +33,7 @@ class ImportsUtility {
 			}
 		}
 		if (sourcePaths.size() == 0) {
-			println 'Source header paths are not set.'
+			println 'Source paths are not set.'
     		System.exit(EXIT_STATUS_INPUT_ERROR)
 		}
 
@@ -50,11 +50,19 @@ class ImportsUtility {
 		}
 		for (String sourcePath : sourcePaths) {
 			File file = new File(sourcePath)
-			if (!file.exists() || file.isDirectory()) {
+			if (!file.exists()) {
 				println "Can not open ${sourcePath}."
 	    		System.exit(EXIT_STATUS_INPUT_ERROR)
 			}
-			replaceLocalWithFrameworkImports(file, headerFrameworkMap, defaultFramework)
+			if (file.isDirectory()) {
+				for (File dirFile : file.listFiles()) {
+					if (!dirFile.isDirectory()) {
+						replaceLocalWithFrameworkImports(dirFile, headerFrameworkMap, defaultFramework)			
+					}
+				}
+			} else {
+				replaceLocalWithFrameworkImports(file, headerFrameworkMap, defaultFramework)
+			}
 		}
 	}
 
