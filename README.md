@@ -4,7 +4,7 @@ ImportsUtility replaces local imports with framework imports (via angle brackets
 ### SYNOPSIS
 `groovy ImportsUtility.groovy [ options ]  [ sourceheaders ]`  
 #### sourceheaders  
-One or more source headers to be edited (such as MyClass.h).
+One or more source files to be edited (such as MyClass.h and MyClass.m).
 
 ### OPTIONS
 #### -uh
