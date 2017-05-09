@@ -8,4 +8,6 @@ One or more source headers to be edited (such as MyClass.h).
 
 ### OPTIONS
 #### -uh
-Specify where to find framewok umbrella headers.
+Specify where to find frameworks umbrella headers. Character ':' is used as path separator.
+#### -dfn
+Specify default framework name. This name is used for headers that were not found in umbella headers.
