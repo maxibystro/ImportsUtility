@@ -11,6 +11,7 @@ class ImportsUtility {
 	static final String INCLUDE_STR = '#include'
 	static final String IMPORT_STR = '#import'
 	static final String HEADER_EXTENSION = '.h'
+	static final String UMBRELLA_HEADER_NAME_SUFFIX = 'Umbrella'
 
 	static void main(String[] args) {
 		String defaultFramework = null
@@ -55,10 +56,9 @@ class ImportsUtility {
 	    		System.exit(EXIT_STATUS_INPUT_ERROR)
 			}
 			if (file.isDirectory()) {
-				for (File dirFile : file.listFiles()) {
-					if (!dirFile.isDirectory()) {
-						replaceLocalWithFrameworkImports(dirFile, headerFrameworkMap, defaultFramework)			
-					}
+				List<File> normalFiles = collectNormalFiles(file, true)
+				for (File dirNormalFile : normalFiles) {
+					replaceLocalWithFrameworkImports(dirNormalFile, headerFrameworkMap, defaultFramework)
 				}
 			} else {
 				replaceLocalWithFrameworkImports(file, headerFrameworkMap, defaultFramework)
@@ -66,10 +66,23 @@ class ImportsUtility {
 		}
 	}
 
+	static List<File> collectNormalFiles(File dirFile, boolean recursively) {
+		List<File> normalFiles = new ArrayList<>()
+		for (File file : dirFile.listFiles()) {
+			if (!file.isDirectory()) {
+				normalFiles.add(file)	
+			} else if (recursively) {
+				normalFiles.addAll(collectNormalFiles(file, recursively))
+			}
+		}
+		return normalFiles
+	}
+
 	static Map<String, String> readUmbrellaHeader(File file) {
 		Map<String, String> headers = new HashMap<>()
-		String fileName = file.getName()
-		String frameworkName = fileName.take(fileName.lastIndexOf('.'))
+		String fileNameWithExt = file.getName()
+		String fileName = fileNameWithExt.take(fileNameWithExt.lastIndexOf('.'))
+		String frameworkName = fileName.endsWith(UMBRELLA_HEADER_NAME_SUFFIX) ? fileName.substring(0, fileName.length() - UMBRELLA_HEADER_NAME_SUFFIX.length()) : fileName
 		String headerPathPrefix = '<' + frameworkName + '/'
 		int index, toIndex
 		file.eachLine { line ->
@@ -89,6 +102,7 @@ class ImportsUtility {
 			}
 			toIndex = line.indexOf('>', index)
 			if (toIndex == INVALID_INDEX) return
+			System.out.println(line.substring(index, toIndex) + "   " + frameworkName)
 			headers.put(line.substring(index, toIndex), frameworkName)
 		}
 		return headers
