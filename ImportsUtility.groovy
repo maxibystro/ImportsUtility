@@ -6,6 +6,7 @@ class ImportsUtility {
 	static final String DEFAULT_FRAMEWORK_NAME_OPTION = 'dfn'
 	static final String UMBRELLA_HEADERS_OPTION = 'uh'
 	static final String PATH_SEPARATOR = ':'
+	static final String FIX_UMBRELLA_HEADERS_OPTION = 'fuh'
 
 	static final int INVALID_INDEX = -1
 	static final String INCLUDE_STR = '#include'
@@ -17,6 +18,7 @@ class ImportsUtility {
 		String defaultFramework = null
 		List<String> umbrellaHeaderPaths = null
 		List<String> sourcePaths = new ArrayList()
+		boolean fixUmbrellaHeaders = false
 		for (int i = 0; i < args.length; i++) {
 			String arg = args[i];
 			if (arg.startsWith(OPTION_PREFIX)) {
@@ -27,6 +29,11 @@ class ImportsUtility {
 						defaultFramework = nextArg
 					} else if (UMBRELLA_HEADERS_OPTION.equals(optionName)) {
 						umbrellaHeaderPaths = nextArg.split(PATH_SEPARATOR)
+					} else if (FIX_UMBRELLA_HEADERS_OPTION.equals(optionName)) {
+						fixUmbrellaHeaders = true
+					} else {
+						println "Unsupported option ${optionName}."
+    					System.exit(EXIT_STATUS_INPUT_ERROR)
 					}
 				}
 			} else {
@@ -57,8 +64,8 @@ class ImportsUtility {
 			}
 			if (file.isDirectory()) {
 				List<File> normalFiles = collectNormalFiles(file, true)
-				for (File dirNormalFile : normalFiles) {
-					replaceLocalWithFrameworkImports(dirNormalFile, headerFrameworkMap, defaultFramework)
+				for (File normalFile : normalFiles) {
+					replaceLocalWithFrameworkImports(normalFile, headerFrameworkMap, defaultFramework)
 				}
 			} else {
 				replaceLocalWithFrameworkImports(file, headerFrameworkMap, defaultFramework)
@@ -80,9 +87,7 @@ class ImportsUtility {
 
 	static Map<String, String> readUmbrellaHeader(File file) {
 		Map<String, String> headers = new HashMap<>()
-		String fileNameWithExt = file.getName()
-		String fileName = fileNameWithExt.take(fileNameWithExt.lastIndexOf('.'))
-		String frameworkName = fileName.endsWith(UMBRELLA_HEADER_NAME_SUFFIX) ? fileName.substring(0, fileName.length() - UMBRELLA_HEADER_NAME_SUFFIX.length()) : fileName
+		String frameworkName = getFrameworkNameByUmbrellaHeaderFile(file)
 		String headerPathPrefix = '<' + frameworkName + '/'
 		int index, toIndex
 		file.eachLine { line ->
@@ -102,10 +107,15 @@ class ImportsUtility {
 			}
 			toIndex = line.indexOf('>', index)
 			if (toIndex == INVALID_INDEX) return
-			System.out.println(line.substring(index, toIndex) + "   " + frameworkName)
 			headers.put(line.substring(index, toIndex), frameworkName)
 		}
 		return headers
+	}
+
+	static String getFrameworkNameByUmbrellaHeaderFile(File file) {
+		String fileNameWithExt = file.getName()
+		String fileName = fileNameWithExt.take(fileNameWithExt.lastIndexOf('.'))
+		return fileName.endsWith(UMBRELLA_HEADER_NAME_SUFFIX) ? fileName.substring(0, fileName.length() - UMBRELLA_HEADER_NAME_SUFFIX.length()) : fileName
 	}
 
 	static void replaceLocalWithFrameworkImports(File file, Map<String, String> frameworksHeaders, String defaultFramework) {
