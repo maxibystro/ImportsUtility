@@ -22,19 +22,25 @@ class ImportsUtility {
 		for (int i = 0; i < args.length; i++) {
 			String arg = args[i];
 			if (arg.startsWith(OPTION_PREFIX)) {
-				if (i + 1 < args.length) {
+				String optionName = arg.substring(1, arg.length())
+				boolean unsupportedOption = false
+				if (FIX_UMBRELLA_HEADERS_OPTION.equals(optionName)) {
+					fixUmbrellaHeaders = true
+				} else if (i + 1 < args.length) {
 					String nextArg = args[++i]
-					String optionName = arg.substring(1, arg.length())
 					if (DEFAULT_FRAMEWORK_NAME_OPTION.equals(optionName)) {
 						defaultFramework = nextArg
 					} else if (UMBRELLA_HEADERS_OPTION.equals(optionName)) {
 						umbrellaHeaderPaths = nextArg.split(PATH_SEPARATOR)
-					} else if (FIX_UMBRELLA_HEADERS_OPTION.equals(optionName)) {
-						fixUmbrellaHeaders = true
 					} else {
-						println "Unsupported option ${optionName}."
-    					System.exit(EXIT_STATUS_INPUT_ERROR)
+						unsupportedOption = true
 					}
+				} else {
+					unsupportedOption = true
+				}
+				if (unsupportedOption) {
+					println "Unsupported option ${optionName}."
+    				System.exit(EXIT_STATUS_INPUT_ERROR)
 				}
 			} else {
 				sourcePaths.add(arg)
@@ -52,6 +58,9 @@ class ImportsUtility {
 				if (!file.exists() || file.isDirectory()) {
 					println "Can not open ${umbrellaHeaderPath}."
 		    		System.exit(EXIT_STATUS_INPUT_ERROR)
+				}
+				if (fixUmbrellaHeaders) {
+					fixUmbrellaHeader(file)
 				}
 				headerFrameworkMap.putAll(readUmbrellaHeader(file))
 			}
@@ -91,14 +100,8 @@ class ImportsUtility {
 		String headerPathPrefix = '<' + frameworkName + '/'
 		int index, toIndex
 		file.eachLine { line ->
-			index = indexOfNotWhitespace(line, 0)
-			if (line.regionMatches(false, index, INCLUDE_STR, 0, INCLUDE_STR.length())) {
-				index += INCLUDE_STR.length()
-			} else if (line.regionMatches(false, index, IMPORT_STR, 0, IMPORT_STR.length())) {
-				index += IMPORT_STR.length()
-			} else {
-				return
-			}
+			index = endIndexOfImport(line)
+			if (index == INVALID_INDEX) return
 			index = line.indexOf(headerPathPrefix, index)
 			if (index == INVALID_INDEX) {
 				return
@@ -118,10 +121,10 @@ class ImportsUtility {
 		return fileName.endsWith(UMBRELLA_HEADER_NAME_SUFFIX) ? fileName.substring(0, fileName.length() - UMBRELLA_HEADER_NAME_SUFFIX.length()) : fileName
 	}
 
-	static void replaceLocalWithFrameworkImports(File file, Map<String, String> frameworksHeaders, String defaultFramework) {
+	static void rewriteFileWithLineConverter(File file, Closure cl) {
 		List<String> newLines = new ArrayList<>()
 		file.eachLine { line ->
-			String newLine = replaceImportsInString(line, frameworksHeaders, defaultFramework)
+			String newLine = cl(line)
 			newLines.add(newLine)
 		}
 		PrintWriter writer = new PrintWriter(file)
@@ -129,13 +132,33 @@ class ImportsUtility {
    		writer.close()
 	}
 
-	static String replaceImportsInString(String str, Map<String, String> frameworksHeaders, String defaultFramework) {
-		int index = 0
-		index = endIndexOf(str, IMPORT_STR, index)
-		if (index == INVALID_INDEX) {
-			index = endIndexOf(str, INCLUDE_STR, index)
-			if (index == INVALID_INDEX) return str
+	static void fixUmbrellaHeader(File file) {
+		String frameworkName = getFrameworkNameByUmbrellaHeaderFile(file)
+		Closure cl = { String line ->
+			return fixImportInString(line, frameworkName)
 		}
+		rewriteFileWithLineConverter(file, cl)
+	}
+
+	static String fixImportInString(String str, String frameworkName) {
+		int index = endIndexOfImport(str)
+		if (index == INVALID_INDEX) return str
+		index = endIndexOf(str, '<', index)
+		if (index == INVALID_INDEX) return str
+		if (str.regionMatches(false, index, frameworkName, 0, frameworkName.length())) return str
+		return str.substring(0, index) + frameworkName + '/' + str.substring(index, str.length())
+	}
+
+	static void replaceLocalWithFrameworkImports(File file, Map<String, String> frameworksHeaders, String defaultFramework) {
+		Closure cl = { String line ->
+			return replaceLocalWithFrameworkImportInString(line, frameworksHeaders, defaultFramework)
+		}
+		rewriteFileWithLineConverter(file, cl)
+	}
+
+	static String replaceLocalWithFrameworkImportInString(String str, Map<String, String> frameworksHeaders, String defaultFramework) {
+		int index = endIndexOfImport(str)
+		if (index == INVALID_INDEX) return str
 		int firstQuotesIndex = str.indexOf('\"', index)
 		if (firstQuotesIndex == INVALID_INDEX) return str
 		int secondQuotesIndex = str.indexOf('\"', firstQuotesIndex + 1)
@@ -160,6 +183,17 @@ class ImportsUtility {
 	static int endIndexOf(String str, String of, int fromIndex) {
 		int index = str.indexOf(of, fromIndex)
 		return index != INVALID_INDEX ? index + of.length() : INVALID_INDEX
+	}
+
+	static int endIndexOfImport(String line) {
+		int index = indexOfNotWhitespace(line, 0)
+		if (line.regionMatches(false, index, INCLUDE_STR, 0, INCLUDE_STR.length())) {
+			index += INCLUDE_STR.length()
+		} else if (line.regionMatches(false, index, IMPORT_STR, 0, IMPORT_STR.length())) {
+			index += IMPORT_STR.length()
+		} else {
+			return INVALID_INDEX
+		}
 	}
 
 }
